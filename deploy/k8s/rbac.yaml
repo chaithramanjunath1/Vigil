@@ -1,0 +1,52 @@
+# What the agent is allowed to do, enforced by Kubernetes itself.
+# Even if the agent (or the LLM steering it) were fully compromised, it could not
+# do more than this, and only inside the "shop" namespace. There is deliberately
+# no access to secrets, no exec, no create/delete of deployments, no other namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vigil
+  namespace: vigil
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vigil-operator
+  namespace: shop
+rules:
+  # observe
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list"]
+  # act: restart_pod
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["delete"]
+  # act: scale_deployment
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "patch"]
+  # act: rollback_deployment (re-applies the previous pod template)
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vigil-operator
+  namespace: shop
+subjects:
+  - kind: ServiceAccount
+    name: vigil
+    namespace: vigil
+roleRef:
+  kind: Role
+  name: vigil-operator
+  apiGroup: rbac.authorization.k8s.io

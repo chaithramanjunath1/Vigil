@@ -1,0 +1,15 @@
+# Route every shop alert to Vigil. Merge into your Alertmanager config
+# (with kube-prometheus-stack: alertmanager.config in values.yaml).
+route:
+  receiver: vigil
+  group_by: [alertname, service]
+  group_wait: 5s
+  group_interval: 15s
+  repeat_interval: 10m
+receivers:
+  - name: vigil
+    webhook_configs:
+      - url: http://vigil.vigil.svc/webhook/alertmanager
+        send_resolved: true
+        http_config:
+          authorization: {type: Bearer, credentials: change-me}   # same value as API_TOKEN

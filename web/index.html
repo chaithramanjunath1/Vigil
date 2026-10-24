@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigil: autonomous SRE agent</title>
+<meta name="description" content="An LLM-powered site reliability agent that detects failures in a microservice cluster, finds the root cause, checks its own guardrails, fixes it, and verifies the fix.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c1920'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%235ed6b4' stroke-width='3.5' stroke-dasharray='13 5' transform='rotate(-70 16 16)'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%238cc8ff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#casefile">Skip to the incident case file</a>
+
+<header class="bar" id="bar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="14 5.6" transform="rotate(-70 16 16)"/><circle cx="16" cy="16" r="3.2" fill="var(--agent)"/></svg>
+    <span class="wordmark">Vigil</span>
+    <span class="watch" id="watch" aria-live="polite">Connecting</span>
+  </div>
+  <div class="controls">
+    <div class="dial" role="radiogroup" aria-label="How much the agent may do on its own" id="dial">
+      <span class="dial-label">Autonomy</span>
+      <button role="radio" aria-checked="false" data-mode="observe" title="The agent diagnoses and proposes. It never changes the cluster.">Observe</button>
+      <button role="radio" aria-checked="false" data-mode="approve" title="Every change waits for your approval.">Ask first</button>
+      <button role="radio" aria-checked="true" data-mode="auto" title="Safe, low-impact fixes run alone. Risky ones still need you.">Autonomous</button>
+    </div>
+    <span class="engine" id="engine" title="Which engine produced the diagnosis"></span>
+    <div class="speed" role="group" aria-label="Simulation speed" id="speed">
+      <button data-speed="1">1x</button><button data-speed="2" class="on">2x</button><button data-speed="5">5x</button>
+    </div>
+    <button class="ghost" id="pause" aria-pressed="false">Pause</button>
+    <button class="ghost" id="reset">Reset</button>
+    <button class="ghost" id="auto" aria-pressed="false" hidden>Autopilot</button>
+    <button class="ghost" id="about">How it works</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="field" aria-label="Live cluster">
+    <div class="field-head">
+      <div class="vitals" id="vitals" aria-live="off"></div>
+      <div class="break">
+        <button class="primary" id="breakBtn" aria-haspopup="true" aria-expanded="false">Break something</button>
+        <div class="menu" id="breakMenu" hidden></div>
+      </div>
+    </div>
+    <div class="topo-wrap">
+      <svg id="topo" viewBox="0 0 1000 610" role="img" aria-label="Service topology. Each ring segment is one pod."></svg>
+    </div>
+    <p class="caption">Each ring segment is one pod. Lines are calls between services; dashed lines are optional dependencies.</p>
+
+    <h2 class="sec">Services</h2>
+    <div class="board" id="board" role="table" aria-label="Service health"></div>
+
+    <h2 class="sec">Incident history</h2>
+    <div class="ledger" id="ledger"></div>
+    <footer class="foot" id="foot"></footer>
+  </section>
+
+  <aside class="paper" id="casefile" aria-label="Incident case file" tabindex="-1">
+    <div class="paper-in" id="case"></div>
+  </aside>
+</main>
+
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+<dialog id="dlg" aria-labelledby="dlgTitle"><div class="dlg-in" id="dlgBody"></div></dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

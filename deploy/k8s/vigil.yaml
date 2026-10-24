@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vigil-secrets
+  namespace: vigil
+type: Opaque
+stringData:
+  GEMINI_API_KEY: ""        # or leave empty to use the offline reasoner
+  API_TOKEN: "change-me"    # required as "Authorization: Bearer ..." on every POST
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vigil
+  namespace: vigil
+spec:
+  replicas: 1                # keep at 1: incident state is held in memory
+  selector:
+    matchLabels: {app: vigil}
+  template:
+    metadata:
+      labels: {app: vigil}
+    spec:
+      serviceAccountName: vigil
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: vigil
+          image: ghcr.io/YOUR_GITHUB_USER/vigil:latest
+          ports: [{containerPort: 8000}]
+          env:
+            - {name: BACKEND, value: kubernetes}
+            - {name: NAMESPACE, value: shop}
+            - {name: PROMETHEUS_URL, value: "http://kube-prometheus-stack-prometheus.monitoring.svc:9090"}
+            - {name: POLL_SECONDS, value: "10"}
+            - {name: AUTONOMY_MODE, value: approve}   # start cautious: observe | approve | auto
+            - {name: ALLOW_CHAOS, value: "false"}
+            - {name: DATA_DIR, value: /data}
+          envFrom:
+            - secretRef: {name: vigil-secrets}
+          readinessProbe: {httpGet: {path: /healthz, port: 8000}}
+          livenessProbe: {httpGet: {path: /healthz, port: 8000}, periodSeconds: 20}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          volumeMounts: [{name: data, mountPath: /data}]
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vigil
+  namespace: vigil
+spec:
+  selector: {app: vigil}
+  ports: [{port: 80, targetPort: 8000}]

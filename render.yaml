@@ -1,0 +1,12 @@
+# One-click host on Render (free tier sleeps when idle; first visit takes ~30s to wake).
+services:
+  - type: web
+    name: vigil
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - {key: AUTOPILOT, value: "true"}        # keeps the public demo alive with a failure every ~40s when calm
+      - {key: SPEED, value: "2"}
+      - {key: GEMINI_API_KEY, sync: false}     # optional: set in the Render dashboard for live LLM diagnosis
+      - {key: LLM_MODEL, value: gemini-3.8-flash}

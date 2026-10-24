@@ -1,0 +1,42 @@
+# Prometheus alert rules for the demo workload (kube-prometheus-stack PrometheusRule).
+# These mirror the thresholds the simulator uses, so the dashboard and a real cluster behave alike.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vigil-shop-rules
+  namespace: monitoring
+  labels: {release: kube-prometheus-stack}
+spec:
+  groups:
+    - name: shop
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum by (service)(rate(http_requests_total{namespace="shop",status=~"5.."}[1m]))
+              / sum by (service)(rate(http_requests_total{namespace="shop"}[1m])) > 0.05
+          for: 30s
+          labels: {severity: warning, namespace: shop}
+          annotations: {summary: "{{ $labels.service }} error rate above 5%"}
+        - alert: HighLatencyP95
+          expr: |
+            histogram_quantile(0.95, sum by (service, le)(rate(http_request_duration_seconds_bucket{namespace="shop"}[1m]))) > 0.5
+          for: 30s
+          labels: {severity: warning, namespace: shop}
+          annotations: {summary: "{{ $labels.service }} p95 latency above 500ms"}
+        - alert: HighMemory
+          expr: |
+            max by (pod)(container_memory_working_set_bytes{namespace="shop",container!=""})
+              / max by (pod)(kube_pod_container_resource_limits{namespace="shop",resource="memory"}) > 0.75
+          for: 20s
+          labels: {severity: warning, namespace: shop}
+          annotations: {summary: "{{ $labels.pod }} memory above 75% of its limit"}
+        - alert: PodCrashLooping
+          expr: max by (pod)(kube_pod_container_status_waiting_reason{namespace="shop",reason="CrashLoopBackOff"}) == 1
+          for: 20s
+          labels: {severity: critical, namespace: shop}
+          annotations: {summary: "{{ $labels.pod }} is crash-looping"}
+        - alert: PodOOMKilled
+          expr: max by (pod)(kube_pod_container_status_last_terminated_reason{namespace="shop",reason="OOMKilled"}) == 1
+          for: 0s
+          labels: {severity: warning, namespace: shop}
+          annotations: {summary: "{{ $labels.pod }} was OOMKilled"}

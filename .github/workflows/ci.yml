@@ -1,0 +1,18 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - run: pip install -r requirements-dev.txt
+      - name: Python tests (policy, LLM handling, full incident loops, HTTP, Kubernetes backend)
+        run: python -m unittest discover -s tests -t .
+      - name: Browser engine tests
+        run: cd web && node --test ../tests/engine.test.mjs
+      - name: Manifests are up to date
+        run: python deploy/gen_manifests.py && git diff --exit-code deploy/k8s/services.yaml
